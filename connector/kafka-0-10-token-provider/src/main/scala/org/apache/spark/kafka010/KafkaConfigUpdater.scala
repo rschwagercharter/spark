@@ -85,5 +85,19 @@ private[spark] case class KafkaConfigUpdater(module: String, kafkaParams: Map[St
     this
   }
 
+  private val clientRackProviderKey = CommonClientConfigs.CLIENT_RACK_CONFIG + ".provider"
+
+  lazy private val _loader = Thread.currentThread().getContextClassLoader()
+
+  def setConsumerRackIdConfigIfNeeded(): this.type = {
+    kafkaParams.get(clientRackProviderKey).map(_.asInstanceOf[String]).foreach { clientRackProviderClassName =>
+      val c: Class[KafkaConsumerRackIdProvider] = Class.forName(clientRackProviderClassName, true, _loader).asInstanceOf[Class[KafkaConsumerRackIdProvider]]
+      val provider: KafkaConsumerRackIdProvider = c.newInstance()
+      val rackId: String = provider.apply()
+      set(CommonClientConfigs.CLIENT_RACK_CONFIG, rackId)
+    }
+    this
+  }
+
   def build(): ju.Map[String, Object] = map
 }

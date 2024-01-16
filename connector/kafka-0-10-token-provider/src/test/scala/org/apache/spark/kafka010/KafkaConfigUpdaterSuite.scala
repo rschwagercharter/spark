@@ -161,4 +161,30 @@ class KafkaConfigUpdaterSuite extends SparkFunSuite with KafkaDelegationTokenTes
     assert(updatedParams.size() === 1)
     assert(updatedParams.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG) === bootStrapServers)
   }
+
+  test("setConsumerRackIdConfigIfNeeded should set the client rack") {
+    val params = Map("client.rack.provider" -> "org.apache.spark.kafka010.DummyRackIdProvider")
+    setSparkEnv(Map.empty)
+
+    val updatedParams = KafkaConfigUpdater(testModule, params)
+      .setConsumerRackIdConfigIfNeeded()
+      .build()
+
+    assert(updatedParams.size() === 2)
+    assert(updatedParams.get("client.rack") === DummyRackIdProvider.rackId)
+    assert(updatedParams.get(CommonClientConfigs.CLIENT_RACK_CONFIG) === DummyRackIdProvider.rackId)
+  }
+
+  test("setConsumerRackIdConfigIfNeeded should not set the client rack if a provider is not given") {
+    val params = Map.empty[String, Object]
+    setSparkEnv(Map.empty)
+
+    val updatedParams = KafkaConfigUpdater(testModule, params)
+      .setConsumerRackIdConfigIfNeeded()
+      .build()
+
+    assert(updatedParams.size() === 0)
+    assert(updatedParams.containsKey("client.rack") === false)
+    assert(updatedParams.containsKey(CommonClientConfigs.CLIENT_RACK_CONFIG) === false)
+  }
 }
